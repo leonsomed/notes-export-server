@@ -9,6 +9,27 @@ const PORT = process.env.PORT || 3001;
 app.use(cors())
 app.use(express.json({ limit: "500mb" }));
 
+const requireAuth = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const expectedToken = process.env.AUTH_TOKEN;
+  if (!expectedToken) {
+    return res.status(500).json({ error: "Server error." });
+  }
+
+  if (typeof authHeader !== "string") {
+    return res.status(401).json({ error: "Unauthorized." });
+  }
+
+  const match = /^Bearer\s+(.+)$/.exec(authHeader);
+  if (!match || match[1] !== expectedToken) {
+    return res.status(401).json({ error: "Unauthorized." });
+  }
+
+  return next();
+};
+
+app.use(requireAuth);
+
 app.get("/api/notes/export/node-names", (req, res) => {
   try {
     const exportsDir = path.join(process.cwd(), "exports");
