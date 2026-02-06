@@ -9,6 +9,31 @@ const PORT = process.env.PORT || 3001;
 app.use(cors())
 app.use(express.json({ limit: "500mb" }));
 
+app.get("/api/notes/export/node-names", (req, res) => {
+  try {
+    const exportsDir = path.join(process.cwd(), "exports");
+    if (!fs.existsSync(exportsDir)) {
+      return res.json({ names: [] });
+    }
+
+    const files = fs.readdirSync(exportsDir);
+    const names = new Set();
+    const exportPattern = /^notes-export-(.+)-(\d{4}-\d{2}-\d{2}T.*)\.json$/;
+
+    for (const file of files) {
+      const match = exportPattern.exec(file);
+      if (match) {
+        names.add(match[1]);
+      }
+    }
+
+    return res.json({ names: Array.from(names).sort() });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Server error." });
+  }
+});
+
 app.post("/api/notes/export", (req, res) => {
   try {
     const payload = req.body;
