@@ -27,7 +27,30 @@ app.get("/api/notes/export/node-names", (req, res) => {
       }
     }
 
-    return res.json({ names: Array.from(names).sort() });
+    const requestedName = typeof req.query.name === "string" ? req.query.name : null;
+    if (requestedName) {
+      const matchingFiles = files
+        .map((file) => {
+          const match = exportPattern.exec(file);
+          if (!match || match[1] !== requestedName) {
+            return null;
+          }
+          return { file, timestamp: match[2] };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+
+      const latest = matchingFiles.at(-1);
+      if (!latest) {
+        return res.status(404).json({ error: "Export not found." });
+      }
+
+      const filePath = path.join(exportsDir, latest.file);
+      const contents = fs.readFileSync(filePath, "utf8");
+      return res.json(JSON.parse(contents));
+    }
+
+    return res.json(Array.from(names).sort());
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Server error." });
